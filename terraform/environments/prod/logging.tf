@@ -1,0 +1,10 @@
+module "logging" {
+  source = "../../modules/logging"
+
+  project_id          = var.project_id
+  service_name        = "eag-gateway"
+  retention_days      = var.log_retention_days
+  archive_bucket_name = var.log_archive_bucket
+
+  depends_on = [google_project_service.apis]
+}

@@ -1,0 +1,147 @@
+name: Deploy EAG
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - ".gitignore"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - prod
+
+env:
+  GATEWAY_IMAGE: ghcr.io/agentgateway/agentgateway:0.12.0
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate config YAML
+        run: python -c "import yaml; yaml.safe_load(open('configs/${{ github.event.inputs.environment || 'staging' }}/config.yaml'))"
+
+      - name: Terraform fmt check
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5"
+      - run: terraform fmt -check -recursive terraform/
+
+  deploy-staging:
+    name: Deploy to Staging
+    needs: validate
+    if: github.event.inputs.environment != 'prod'
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5"
+
+      - name: Terraform Init
+        working-directory: terraform/environments/staging
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: terraform/environments/staging
+        run: terraform apply -auto-approve
+
+      - name: Deploy gateway
+        run: python scripts/deploy.py --env staging --image ${{ env.GATEWAY_IMAGE }}
+
+      - name: Health check
+        run: python scripts/health_check.py --env staging
+
+  deploy-prod:
+    name: Deploy to Production
+    needs: [validate, deploy-staging]
+    if: github.event.inputs.environment == 'prod' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5"
+
+      - name: Terraform Init
+        working-directory: terraform/environments/prod
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: terraform/environments/prod
+        run: terraform apply -auto-approve
+
+      - name: Deploy gateway
+        run: python scripts/deploy.py --env prod --image ${{ env.GATEWAY_IMAGE }}
+
+      - name: Health check
+        run: python scripts/health_check.py --env prod
+
+  sync-tailscale-ips:
+    name: Sync Tailscale IPs
+    runs-on: ubuntu-latest
+    # Run daily and on manual trigger
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Sync Tailscale IPs
+        env:
+          TAILSCALE_API_KEY: ${{ secrets.TAILSCALE_API_KEY }}
+          TAILSCALE_TAILNET: ${{ secrets.TAILSCALE_TAILNET }}
+        run: python scripts/tailscale_ips.py --env prod

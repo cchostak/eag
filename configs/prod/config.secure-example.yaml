@@ -1,0 +1,392 @@
+# EAG Production Configuration - Security Hardened Example
+#
+# This example demonstrates comprehensive security controls to prevent:
+# - Malicious domain access
+# - Dangerous command execution (rm -rf, nc, curl | bash, etc.)
+# - Unauthorized file access
+# - Resource abuse
+
+config:
+  adminAddr: 0.0.0.0:15000
+  statsAddr: 0.0.0.0:15001
+  readinessAddr: 0.0.0.0:15002
+  logging:
+    level: info
+  tracing:
+    otlpEndpoint: http://localhost:4317
+    randomSampling: 1.0  # 100% sampling for security audit
+
+binds:
+  # --- MCP Listener with Security Controls ---
+  - port: 3000
+    listeners:
+      - routes:
+          - policies:
+              # Layer 1: JWT Authentication
+              jwtAuth:
+                mode: strict
+                issuer: https://auth.yourcompany.com
+                audiences: ["eag.yourcompany.com"]
+                jwks:
+                  uri: https://auth.yourcompany.com/.well-known/jwks.json
+
+              # Layer 2: Rate Limiting
+              localRateLimit:
+                requests: 100
+                window: 60s
+
+              # Layer 3: Authorization Policies
+              authorization:
+                rules:
+                  # Enforce URL allowlist for outbound fetch/file tools (tighten to your domains)
+                  - deny: |
+                      has(request.body.arguments.url) &&
+                      !request.body.arguments.url.matches("^https://(github\\.com/yourorg/.*|docs\\.yourcompany\\.com/.*|eag\\.yourcompany\\.com/.*)")
+                    message: "Domain not in allowlist"
+
+                  # Block localhost / RFC1918 / IP-literal URLs
+                  - deny: |
+                      has(request.body.arguments.url) &&
+                      (request.body.arguments.url.matches("^https?://(127\\.0\\.0\\.1|localhost|10\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[0-1])\\.)") ||
+                       request.body.arguments.url.matches("^https?://\\d+\\.\\d+\\.\\d+\\.\\d+"))
+                    message: "Local/IP literal URLs are blocked"
+
+                  # Tenant binding: header must match JWT tenant claim
+                  - deny: |
+                      has(request.headers) &&
+                      has(request.headers["x-tenant-id"]) &&
+                      has(jwt.tenant) &&
+                      request.headers["x-tenant-id"] != jwt.tenant
+                    message: "Tenant header does not match identity"
+
+                  # --- Command Execution Blocks ---
+
+                  # Block all shell/command execution tools
+                  - deny: |
+                      has(request.body.tool) &&
+                      request.body.tool.matches(".*(bash|shell|exec|command|run).*")
+                    message: "Command execution tools are blocked by policy"
+
+                  # Block specific dangerous commands in arguments
+                  - deny: |
+                      has(request.body.arguments.command) &&
+                      (request.body.arguments.command.matches(".*rm\\s+-r?f.*") ||
+                       request.body.arguments.command.matches(".*nc\\s+-.*") ||
+                       request.body.arguments.command.matches(".*ncat.*") ||
+                       request.body.arguments.command.matches(".*mkfs.*") ||
+                       request.body.arguments.command.matches(".*dd\\s+if=.*") ||
+                       request.body.arguments.command.matches(".*curl.*\\|.*sh.*") ||
+                       request.body.arguments.command.matches(".*wget.*\\|.*bash.*"))
+                    message: "Dangerous command pattern blocked"
+
+                  # --- Filesystem Blocks ---
+
+                  # Block writes to sensitive directories
+                  - deny: |
+                      has(request.body.tool) &&
+                      request.body.tool.contains("write") &&
+                      has(request.body.arguments.path) &&
+                      (request.body.arguments.path.startsWith("/etc") ||
+                       request.body.arguments.path.startsWith("/sys") ||
+                       request.body.arguments.path.startsWith("/proc") ||
+                       request.body.arguments.path.startsWith("/root") ||
+                       request.body.arguments.path.contains("/.ssh/") ||
+                       request.body.arguments.path.contains("/.aws/"))
+                    message: "Write to system directories blocked"
+
+                  # Block reads from sensitive files
+                  - deny: |
+                      has(request.body.tool) &&
+                      request.body.tool.contains("read") &&
+                      has(request.body.arguments.path) &&
+                      (request.body.arguments.path.matches(".*/etc/(passwd|shadow)") ||
+                       request.body.arguments.path.contains("/.ssh/id_") ||
+                       request.body.arguments.path.contains("/.aws/credentials"))
+                    message: "Read from sensitive file blocked"
+
+                  # Restrict filesystem operations to /workspace only
+                  - deny: |
+                      has(request.body.tool) &&
+                      (request.body.tool.contains("read") ||
+                       request.body.tool.contains("write") ||
+                       request.body.tool.contains("list")) &&
+                      has(request.body.arguments.path) &&
+                      !request.body.arguments.path.startsWith("/workspace")
+                    message: "Filesystem access restricted to /workspace directory"
+
+                  # --- Network/URL Blocks ---
+
+                  # Block known malicious domains
+                  - deny: |
+                      has(request.body.arguments.url) &&
+                      (request.body.arguments.url.contains("malicious.webserver") ||
+                       request.body.arguments.url.contains("pastebin.com") ||
+                       request.body.arguments.url.contains("iplogger.org") ||
+                       request.body.arguments.url.contains("grabify.link") ||
+                       request.body.arguments.url.contains("bit.ly") ||
+                       request.body.arguments.url.contains("tinyurl.com"))
+                    message: "Blocked domain or URL shortener"
+
+                  # Allowlist approach - only allow approved domains (uncomment to enforce)
+                  # - deny: |
+                  #     has(request.body.arguments.url) &&
+                  #     !request.body.arguments.url.matches("^https://(github\\.com|stackoverflow\\.com|docs\\.python\\.org|docs\\.anthropic\\.com)/.*")
+                  #   message: "Domain not in allowlist"
+
+                  # Block non-HTTPS URLs
+                  - deny: |
+                      has(request.body.arguments.url) &&
+                      !request.body.arguments.url.startsWith("https://")
+                    message: "Only HTTPS URLs allowed"
+
+                  # --- RBAC: Role-Based Access Control ---
+
+                  # Admin-only tools
+                  - deny: |
+                      has(request.body.tool) &&
+                      request.body.tool.matches(".*(delete|drop|destroy|remove).*") &&
+                      !jwt.groups.contains("admins")
+                    message: "Admin role required for destructive operations"
+
+                  # Platform team can use database tools
+                  - deny: |
+                      has(request.body.tool) &&
+                      request.body.tool.contains("database") &&
+                      !jwt.groups.contains("platform-team")
+                    message: "Platform team role required for database access"
+
+                  # --- Default: Allow if no deny rules matched ---
+                  - allow: "true"
+
+              # Layer 4: CORS
+              cors:
+                allowOrigins: ["https://app.yourcompany.com"]
+                allowHeaders:
+                  - mcp-protocol-version
+                  - content-type
+                  - authorization
+                  - cache-control
+                exposeHeaders:
+                  - Mcp-Session-Id
+
+            backends:
+              - mcp:
+                  targets:
+                    # Filesystem - filtered and scoped to /workspace
+                    # Uses mcp_command_filter.py wrapper for additional safety
+                    - name: safe-filesystem
+                      stdio:
+                        cmd: python
+                        args:
+                          - /app/scripts/mcp_command_filter.py
+                          - npx
+                          - "-y"
+                          - "@modelcontextprotocol/server-filesystem"
+                          - "/workspace"
+
+                    # Remote MCP server (e.g., code search, documentation)
+                    # Network-level controls ensure it can't reach malicious domains
+                    # - name: code-search
+                    #   sse:
+                    #     host: mcp-code-search.internal:8080
+                    #     path: /sse
+
+  # --- LLM Listener with Security Controls ---
+  - port: 4000
+    listeners:
+      - routes:
+          - policies:
+              jwtAuth:
+                mode: strict
+                issuer: https://auth.yourcompany.com
+                audiences: ["eag.yourcompany.com"]
+                jwks:
+                  uri: https://auth.yourcompany.com/.well-known/jwks.json
+
+              # Stricter rate limits for LLM endpoints (expensive)
+              localRateLimit:
+                requests: 50
+                window: 60s
+
+              # Detect prompt injection attempts
+              authorization:
+                rules:
+                  # Enforce URL allowlist when tool calls include URLs
+                  - deny: |
+                      has(request.body.arguments.url) &&
+                      !request.body.arguments.url.matches("^https://(github\\.com/yourorg/.*|docs\\.yourcompany\\.com/.*|eag\\.yourcompany\\.com/.*)")
+                    message: "Domain not in allowlist"
+
+                  # Block localhost / RFC1918 / IP-literal URLs
+                  - deny: |
+                      has(request.body.arguments.url) &&
+                      (request.body.arguments.url.matches("^https?://(127\\.0\\.0\\.1|localhost|10\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[0-1])\\.)") ||
+                       request.body.arguments.url.matches("^https?://\\d+\\.\\d+\\.\\d+\\.\\d+"))
+                    message: "Local/IP literal URLs are blocked"
+
+                  # Tenant binding: header must match JWT tenant claim
+                  - deny: |
+                      has(request.headers) &&
+                      has(request.headers["x-tenant-id"]) &&
+                      has(jwt.tenant) &&
+                      request.headers["x-tenant-id"] != jwt.tenant
+                    message: "Tenant header does not match identity"
+
+                  # Model/provider pinning by allowlist
+                  - deny: |
+                      has(request.body.model) &&
+                      !request.body.model.matches("^(gpt-4o|gpt-4o-mini|claude-3\\.(5|1)-sonnet)$")
+                    message: "Model not approved for production use"
+
+                  # Cap response size / cost
+                  - deny: |
+                      has(request.body.max_tokens) && request.body.max_tokens > 4096
+                    message: "max_tokens exceeds policy (4096)"
+
+                  # Block requests containing obvious secrets/keys
+                  - deny: |
+                      has(request.body.messages) &&
+                      request.body.messages.exists(m,
+                        m.content.matches("(?i).*BEGIN (RSA|OPENSSH|PRIVATE) KEY.*") ||
+                        m.content.matches("AKIA[0-9A-Z]{16}") ||   # AWS access key
+                        m.content.matches("sk-[A-Za-z0-9]{30,}") || # OpenAI-style keys
+                        m.content.matches("(?i)password\\s*[:=]") ||
+                        m.content.matches("(?i)secret\\s*[:=]") )
+                    message: "Secrets detected in request; blocked"
+
+                  # Block likely PII (SSN/CC/phone patterns) from being sent to LLM
+                  - deny: |
+                      has(request.body.messages) &&
+                      request.body.messages.exists(m,
+                        m.content.matches("(?<!\\d)(\\d{3}-\\d{2}-\\d{4})(?!\\d)") ||               # US SSN
+                        m.content.matches("(?<!\\d)(\\d{4}[- ]?){3}\\d{4}(?!\\d)") ||              # Credit card
+                        m.content.matches("(?<!\\d)(\\+?1[- ]?)?\\(?\\d{3}\\)?[- ]?\\d{3}[- ]?\\d{4}(?!\\d)") # US phone
+                      )
+                    message: "Potential PII detected; blocked"
+
+                  # Block instructions that ask the model to generate or run shell/OS commands
+                  - deny: |
+                      has(request.body.messages) &&
+                      request.body.messages.exists(m,
+                        m.content.matches("(?i).*rm\\s+-r?f\\s+/.*") ||
+                        m.content.matches("(?i).*curl .*\\|\\s*(sh|bash).*") ||
+                        m.content.matches("(?i).*nc\\s+-.*") ||
+                        m.content.contains("```bash") ||
+                        m.content.contains("`rm -rf") )
+                    message: "Dangerous command pattern blocked"
+
+                  - deny: |
+                      has(request.body.messages) &&
+                      request.body.messages.exists(m,
+                        m.content.contains("ignore previous") ||
+                        m.content.contains("disregard instructions") ||
+                        m.content.contains("you are now") ||
+                        m.content.contains("forget everything"))
+                    message: "Potential prompt injection detected"
+
+                  - allow: "true"
+
+            backends:
+              - llm:
+                  targets:
+                    - name: openai
+                      openai:
+                        apiKey: "${OPENAI_API_KEY}"
+                    - name: anthropic
+                      anthropic:
+                        apiKey: "${ANTHROPIC_API_KEY}"
+
+  # --- A2A Listener ---
+  - port: 5000
+    listeners:
+      - routes:
+          - policies:
+              jwtAuth:
+                mode: strict
+                issuer: https://auth.yourcompany.com
+                audiences: ["eag.yourcompany.com"]
+                jwks:
+                  uri: https://auth.yourcompany.com/.well-known/jwks.json
+              localRateLimit:
+                requests: 100
+                window: 60s
+              # Apply the same guardrails used on LLM to A2A traffic
+              authorization:
+                rules:
+                  # Model/provider pinning (if A2A forwards model selection)
+                  - deny: |
+                      has(request.body.model) &&
+                      !request.body.model.matches("^(gpt-4o|gpt-4o-mini|claude-3\\.(5|1)-sonnet)$")
+                    message: "Model not approved for production use"
+
+                  # Cap response size / cost
+                  - deny: |
+                      has(request.body.max_tokens) && request.body.max_tokens > 4096
+                    message: "max_tokens exceeds policy (4096)"
+
+                  # Enforce URL allowlist when URLs are passed through
+                  - deny: |
+                      has(request.body.arguments.url) &&
+                      !request.body.arguments.url.matches("^https://(github\\.com/yourorg/.*|docs\\.yourcompany\\.com/.*|eag\\.yourcompany\\.com/.*)")
+                    message: "Domain not in allowlist"
+
+                  # Block localhost / RFC1918 / IP-literal URLs
+                  - deny: |
+                      has(request.body.arguments.url) &&
+                      (request.body.arguments.url.matches("^https?://(127\\.0\\.0\\.1|localhost|10\\.|192\\.168\\.|172\\.(1[6-9]|2[0-9]|3[0-1])\\.)") ||
+                       request.body.arguments.url.matches("^https?://\\d+\\.\\d+\\.\\d+\\.\\d+"))
+                    message: "Local/IP literal URLs are blocked"
+
+                  # Tenant binding: header must match JWT tenant claim
+                  - deny: |
+                      has(request.headers) &&
+                      has(request.headers["x-tenant-id"]) &&
+                      has(jwt.tenant) &&
+                      request.headers["x-tenant-id"] != jwt.tenant
+                    message: "Tenant header does not match identity"
+
+                  # Block secrets
+                  - deny: |
+                      has(request.body.messages) &&
+                      request.body.messages.exists(m,
+                        m.content.matches("(?i).*BEGIN (RSA|OPENSSH|PRIVATE) KEY.*") ||
+                        m.content.matches("AKIA[0-9A-Z]{16}") ||
+                        m.content.matches("sk-[A-Za-z0-9]{30,}") ||
+                        m.content.matches("(?i)password\\s*[:=]") ||
+                        m.content.matches("(?i)secret\\s*[:=]") )
+                    message: "Secrets detected in request; blocked"
+
+                  # Block PII
+                  - deny: |
+                      has(request.body.messages) &&
+                      request.body.messages.exists(m,
+                        m.content.matches("(?<!\\d)(\\d{3}-\\d{2}-\\d{4})(?!\\d)") ||
+                        m.content.matches("(?<!\\d)(\\d{4}[- ]?){3}\\d{4}(?!\\d)") ||
+                        m.content.matches("(?<!\\d)(\\+?1[- ]?)?\\(?\\d{3}\\)?[- ]?\\d{3}[- ]?\\d{4}(?!\\d)") )
+                    message: "Potential PII detected; blocked"
+
+                  # Block dangerous command patterns
+                  - deny: |
+                      has(request.body.messages) &&
+                      request.body.messages.exists(m,
+                        m.content.matches("(?i).*rm\\s+-r?f\\s+/.*") ||
+                        m.content.matches("(?i).*curl .*\\|\\s*(sh|bash).*") ||
+                        m.content.matches("(?i).*nc\\s+-.*") ||
+                        m.content.contains("```bash") ||
+                        m.content.contains("`rm -rf") )
+                    message: "Dangerous command pattern blocked"
+
+                  # Prompt-injection style attempts
+                  - deny: |
+                      has(request.body.messages) &&
+                      request.body.messages.exists(m,
+                        m.content.contains("ignore previous") ||
+                        m.content.contains("disregard instructions") ||
+                        m.content.contains("you are now") ||
+                        m.content.contains("forget everything"))
+                    message: "Potential prompt injection detected"
+
+                  - allow: "true"
+            backends:
+              - a2a:
+                  targets: []

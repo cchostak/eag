@@ -1,0 +1,86 @@
+# EAG Production Configuration
+
+config:
+  adminAddr: 0.0.0.0:15000
+  statsAddr: 0.0.0.0:15001
+  readinessAddr: 0.0.0.0:15002
+  logging:
+    level: info
+  tracing:
+    otlpEndpoint: http://localhost:4317
+    randomSampling: 0.1
+
+binds:
+  # --- MCP Listener ---
+  - port: 3000
+    listeners:
+      - routes:
+          - policies:
+              jwtAuth:
+                mode: strict
+                issuer: https://auth.yourcompany.com
+                audiences: ["eag.yourcompany.com"]
+                jwks:
+                  uri: https://auth.yourcompany.com/.well-known/jwks.json
+              authorization:
+                rules:
+                  - allow: 'jwt.iss == "https://auth.yourcompany.com"'
+              cors:
+                allowOrigins: ["https://app.yourcompany.com"]
+                allowHeaders:
+                  - mcp-protocol-version
+                  - content-type
+                  - authorization
+                  - cache-control
+                exposeHeaders:
+                  - Mcp-Session-Id
+              localRateLimit:
+                requests: 100
+                window: 60s
+            backends:
+              - mcp:
+                  targets:
+                    # Add production MCP targets here
+                    - name: example
+                      sse:
+                        host: mcp-server.internal:8080
+                        path: /sse
+
+  # --- LLM Listener ---
+  - port: 4000
+    listeners:
+      - routes:
+          - policies:
+              jwtAuth:
+                mode: strict
+                issuer: https://auth.yourcompany.com
+                audiences: ["eag.yourcompany.com"]
+                jwks:
+                  uri: https://auth.yourcompany.com/.well-known/jwks.json
+              localRateLimit:
+                requests: 50
+                window: 60s
+            backends:
+              - llm:
+                  targets:
+                    - name: openai
+                      openai:
+                        apiKey: "${OPENAI_API_KEY}"
+                    - name: anthropic
+                      anthropic:
+                        apiKey: "${ANTHROPIC_API_KEY}"
+
+  # --- A2A Listener ---
+  - port: 5000
+    listeners:
+      - routes:
+          - policies:
+              jwtAuth:
+                mode: strict
+                issuer: https://auth.yourcompany.com
+                audiences: ["eag.yourcompany.com"]
+                jwks:
+                  uri: https://auth.yourcompany.com/.well-known/jwks.json
+            backends:
+              - a2a:
+                  targets: []

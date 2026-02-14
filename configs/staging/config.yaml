@@ -1,0 +1,68 @@
+# EAG Staging Configuration
+
+config:
+  adminAddr: 0.0.0.0:15000
+  statsAddr: 0.0.0.0:15001
+  readinessAddr: 0.0.0.0:15002
+  logging:
+    level: info
+  tracing:
+    otlpEndpoint: http://localhost:4317
+    randomSampling: 0.5
+
+binds:
+  # --- MCP Listener ---
+  - port: 3000
+    listeners:
+      - routes:
+          - policies:
+              jwtAuth:
+                mode: optional
+                issuer: https://auth.yourcompany.com
+                audiences: ["eag-staging.yourcompany.com"]
+                jwks:
+                  uri: https://auth.yourcompany.com/.well-known/jwks.json
+              cors:
+                allowOrigins: ["https://staging.yourcompany.com"]
+                allowHeaders:
+                  - mcp-protocol-version
+                  - content-type
+                  - authorization
+                  - cache-control
+                exposeHeaders:
+                  - Mcp-Session-Id
+              localRateLimit:
+                requests: 200
+                window: 60s
+            backends:
+              - mcp:
+                  targets:
+                    # Add your staging MCP targets here
+                    - name: example
+                      sse:
+                        host: mcp-server.internal:8080
+                        path: /sse
+
+  # --- LLM Listener ---
+  - port: 4000
+    listeners:
+      - routes:
+          - policies:
+              jwtAuth:
+                mode: optional
+                issuer: https://auth.yourcompany.com
+                audiences: ["eag-staging.yourcompany.com"]
+                jwks:
+                  uri: https://auth.yourcompany.com/.well-known/jwks.json
+              localRateLimit:
+                requests: 100
+                window: 60s
+            backends:
+              - llm:
+                  targets:
+                    - name: openai
+                      openai:
+                        apiKey: "${OPENAI_API_KEY}"
+                    - name: anthropic
+                      anthropic:
+                        apiKey: "${ANTHROPIC_API_KEY}"

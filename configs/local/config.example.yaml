@@ -1,0 +1,20 @@
+# EAG Local Development - Minimal Configuration
+
+config:
+  adminAddr: 0.0.0.0:15000
+  statsAddr: 0.0.0.0:15001
+  readinessAddr: 0.0.0.0:15002
+  logging:
+    level: info
+
+binds:
+  - port: 3000
+    listeners:
+      - routes:
+          - policies:
+              cors:
+                allowOrigins: ["*"]
+                allowHeaders: ["*"]
+            backends:
+              - mcp:
+                  targets: []

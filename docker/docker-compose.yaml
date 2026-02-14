@@ -1,0 +1,44 @@
+services:
+  agentgateway:
+    image: ghcr.io/agentgateway/agentgateway:0.12.0
+    command: ["-f", "/etc/agentgateway/config.yaml"]
+    ports:
+      - "3000:3000"   # MCP listener
+      - "4000:4000"   # LLM listener
+      - "5000:5000"   # A2A listener
+      - "15000:15000" # Admin UI
+      - "15001:15001" # Stats/metrics
+      - "15002:15002" # Readiness probe
+    volumes:
+      - ../configs/local/config.yaml:/etc/agentgateway/config.yaml:ro
+    env_file:
+      - path: ../.env
+        required: false
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:15002/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # Optional: OpenTelemetry collector for local observability
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.96.0
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8889:8889"   # Prometheus metrics
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    profiles:
+      - observability
+
+  # Optional: Jaeger for trace visualization
+  jaeger:
+    image: jaegertracing/all-in-one:1.54
+    ports:
+      - "16686:16686" # Jaeger UI
+      - "14268:14268" # Jaeger collector
+    profiles:
+      - observability

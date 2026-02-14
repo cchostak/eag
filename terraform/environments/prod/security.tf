@@ -1,0 +1,9 @@
+module "security" {
+  source = "../../modules/security"
+
+  project_id       = var.project_id
+  config_yaml_path = "${path.module}/../../../configs/prod/config.yaml"
+  api_keys         = var.api_keys
+
+  depends_on = [google_project_service.apis]
+}
