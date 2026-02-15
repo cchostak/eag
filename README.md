@@ -1,6 +1,6 @@
 # EAG - Enterprise Agent Gateway
 
-Production deployment of [Agent Gateway](https://agentgateway.dev/) on Google Cloud Platform for ~200 globally distributed engineers.
+Production-ready deployment of [Agent Gateway](https://agentgateway.dev/) on Google Cloud Platform with enterprise security, multi-region HA, and comprehensive observability.
 
 ## Architecture
 
@@ -71,8 +71,25 @@ make local-down
 
 ### Deploy to GCP
 
+#### 1. Set up OIDC Authentication for GitHub Actions
+
+First, configure Workload Identity Federation to allow GitHub Actions to deploy without service account keys:
+
 ```bash
-# 1. Authenticate
+# Run the automated setup script (from GCP Cloud Shell or local CLI)
+bash scripts/setup-gcp-oidc.sh
+```
+
+This will output GitHub secrets. Add them to your repository:
+- Go to `https://github.com/cchostak/eag/settings/secrets/actions`
+- Add `GCP_WORKLOAD_IDENTITY_PROVIDER` and `GCP_SERVICE_ACCOUNT`
+
+See [docs/GITHUB_GCP_OIDC.md](docs/GITHUB_GCP_OIDC.md) for detailed setup instructions.
+
+#### 2. Deploy Infrastructure
+
+```bash
+# 1. Authenticate locally for manual deployment
 gcloud auth application-default login
 
 # 2. Configure your project
@@ -94,6 +111,8 @@ make deploy ENV=prod
 make health ENV=prod
 ```
 
+**Note:** Once OIDC is configured, GitHub Actions will handle deployments automatically on pushes to `main`.
+
 ## Repository Structure
 
 ```
@@ -113,6 +132,7 @@ eag/
 │   └── prod/
 │       └── config.yaml
 ├── scripts/
+│   ├── setup-gcp-oidc.sh      # Automated OIDC setup for GCP
 │   ├── deploy.py              # Deployment orchestrator
 │   ├── health_check.py        # Health check utility
 │   └── tailscale_ips.py       # Tailscale IP list sync

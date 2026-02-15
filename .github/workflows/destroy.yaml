@@ -1,0 +1,67 @@
+name: Destroy EAG
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment to destroy"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - prod
+
+env:
+  GATEWAY_IMAGE: ghcr.io/agentgateway/agentgateway:0.12.0
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Terraform fmt check
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5"
+      - run: terraform fmt -check -recursive terraform/
+
+  destroy:
+    name: Destroy
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    permissions:
+      contents: read
+      id-token: write  # Required for OIDC authentication
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5"
+
+      - name: Terraform Init
+        working-directory: terraform/environments/${{ github.event.inputs.environment }}
+        run: terraform init
+
+      - name: Terraform Destroy
+        working-directory: terraform/environments/${{ github.event.inputs.environment }}
+        run: terraform destroy -auto-approve
+
+      - name: Confirm health check is expected to fail
+        continue-on-error: true
+        run: python scripts/health_check.py --env ${{ github.event.inputs.environment }}

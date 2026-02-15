@@ -2,7 +2,7 @@
 
 ## Current Architecture Costs (Estimated)
 
-Based on 200 engineers, moderate usage (~100K requests/day):
+Based on moderate usage (~100K requests/day):
 
 | Service | Monthly Cost | Notes |
 |---------|-------------|-------|
@@ -12,7 +12,14 @@ Based on 200 engineers, moderate usage (~100K requests/day):
 | Secret Manager | $1 | ~5 secrets, <10K accesses |
 | Cloud Logging | $50-200 | 50GB/month @ $0.50/GB |
 | Cloud Trace | $10-30 | Sampled at 10% |
-| **Total** | **$384-754/mo** | ~$1.92-3.77 per engineer/mo |
+| **Total** | **$384-754/mo** | Scales with actual usage |
+
+**Cost Scaling:**
+- **Small teams (10-50 users)**: $100-200/month
+- **Medium teams (50-200 users)**: $300-500/month
+- **Large teams (200+ users)**: $500-1000+/month
+
+> Costs scale primarily with request volume and logging. Most services are pay-per-use.
 
 ## Cost Optimization Strategies
 

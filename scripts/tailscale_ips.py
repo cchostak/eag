@@ -59,7 +59,7 @@ def update_cloud_armor(project_id: str, ips: list[str]) -> None:
         return
 
     # Cloud Armor has a limit of ~256 IPs per rule. Split if needed.
-    # For 200 engineers, we should be well within this limit.
+    # For most organizations, this should be well within this limit.
     ip_list = ",".join(ips)
 
     print(f"Updating Cloud Armor rule with {len(ips)} IPs...")

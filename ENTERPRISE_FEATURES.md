@@ -110,7 +110,7 @@ This document summarizes all enterprise/production-ready features included in th
 
 **Load Testing** (`tests/load/locustfile.py`)
 - Locust-based load testing
-- Simulates 200+ concurrent users
+- Simulates high concurrent user load
 - Multiple request patterns (list, read, search)
 - Performance baseline establishment
 
@@ -122,8 +122,8 @@ This document summarizes all enterprise/production-ready features included in th
 ### Cost Management
 
 **Cost Tracking**
-- Estimated monthly costs: $384-754 for 200 engineers
-- Per-engineer cost: ~$1.92-3.77/month
+- Detailed cost estimation based on usage
+- Per-user cost tracking and analysis
 - Budget alerts at 50%, 90%, 100%
 - Resource labeling for cost allocation
 
@@ -190,7 +190,7 @@ This document summarizes all enterprise/production-ready features included in th
 | Availability SLO | 99.9% | ✅ Defined |
 | Latency (p95) | < 2s | ✅ Monitored |
 | Error Budget | 0.1% | ✅ Tracked |
-| Cost per Engineer | < $5/mo | ✅ $1.92-3.77 |
+| Cost Efficiency | Optimized | ✅ Tracked |
 | Security Tests | > 90% pass | ✅ 100% |
 | Code Coverage | > 80% | ⏳ Pending |
 
@@ -210,17 +210,17 @@ This document summarizes all enterprise/production-ready features included in th
 
 ## 💰 Total Cost of Ownership
 
-**Infrastructure**: $384-754/month
-- Cloud Run: $300-500
-- Load Balancer: $18 + traffic
-- Logging: $50-200
-- Other: $16-36
+**Infrastructure**: Scales with usage
+- Cloud Run: Auto-scales, pay-per-request
+- Load Balancer: $18 base + traffic
+- Logging: Volume-based pricing
+- Other services: Minimal fixed costs
 
 **Engineering**: ~16 hours setup + 4 hours/month maintenance
 - Initial setup: 1 engineer x 2 days
 - Ongoing: 0.5 engineer days/month
 
-**Total**: ~$1.92-3.77 per engineer/month (200 engineers)
+See [docs/COST_MANAGEMENT.md](docs/COST_MANAGEMENT.md) for detailed cost analysis and optimization strategies.
 
 ## 🚀 Time to Production
 
@@ -300,4 +300,4 @@ Deploy in stages for progressive value:
 
 ---
 
-**Bottom line**: This is not a proof-of-concept. This is a battle-tested, enterprise-grade deployment of Agent Gateway with all the bells and whistles for a 200-engineer organization.
+**Bottom line**: This is not a proof-of-concept. This is a battle-tested, enterprise-grade deployment of Agent Gateway with all the bells and whistles for production use at scale.

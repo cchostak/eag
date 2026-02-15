@@ -54,7 +54,7 @@ Use this checklist to verify EAG is ready for enterprise production deployment.
 
 ## ✅ Cost & Governance (Complete)
 
-- [x] Cost estimation ($384-754/mo for 200 engineers)
+- [x] Usage-based cost estimation
 - [x] Cost optimization guide (docs/COST_MANAGEMENT.md)
 - [x] Budget alerts (Terraform module)
 - [x] Resource labeling for cost allocation
@@ -116,7 +116,7 @@ Use this checklist to verify EAG is ready for enterprise production deployment.
   locust -f tests/load/locustfile.py \
     --host=https://eag-staging.yourcompany.com \
     --token=<your-jwt-token> \
-    --users=200 \
+    --users=<expected-concurrent-users> \
     --spawn-rate=10
 
   # Adjust min/max instances based on results
@@ -191,7 +191,7 @@ Use this checklist to verify EAG is ready for enterprise production deployment.
 
 1. [ ] All "High Priority" items completed
 2. [ ] Security review passed
-3. [ ] Load testing completed (can handle 200 concurrent users)
+3. [ ] Load testing completed (validated for expected concurrent users)
 4. [ ] On-call team trained
 5. [ ] Rollback procedure tested in staging
 6. [ ] Stakeholders notified (send announcement)

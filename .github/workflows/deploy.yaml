@@ -1,5 +1,9 @@
 name: Deploy EAG
 
+# This workflow uses OIDC (Workload Identity Federation) to authenticate with GCP
+# Setup required: Run scripts/setup-gcp-oidc.sh and add the output secrets to GitHub
+# See docs/GITHUB_GCP_OIDC.md for detailed instructions
+
 on:
   push:
     branches: [main]
@@ -44,7 +48,7 @@ jobs:
     environment: staging
     permissions:
       contents: read
-      id-token: write
+      id-token: write  # Required for OIDC authentication
 
     steps:
       - uses: actions/checkout@v4
@@ -52,6 +56,7 @@ jobs:
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
         with:
+          # These secrets are set up by scripts/setup-gcp-oidc.sh
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
@@ -85,7 +90,7 @@ jobs:
     environment: production
     permissions:
       contents: read
-      id-token: write
+      id-token: write  # Required for OIDC authentication
 
     steps:
       - uses: actions/checkout@v4
@@ -93,6 +98,7 @@ jobs:
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
         with:
+          # These secrets are set up by scripts/setup-gcp-oidc.sh
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
@@ -126,7 +132,7 @@ jobs:
     environment: production
     permissions:
       contents: read
-      id-token: write
+      id-token: write  # Required for OIDC authentication
 
     steps:
       - uses: actions/checkout@v4
@@ -134,6 +140,7 @@ jobs:
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
         with:
+          # These secrets are set up by scripts/setup-gcp-oidc.sh
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
