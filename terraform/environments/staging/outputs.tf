@@ -14,3 +14,8 @@ output "state_bucket" {
   value       = module.state_bucket.bucket_name
   description = "GCS bucket for Terraform state (configure backend to use it)"
 }
+
+output "artifact_registry_repo" {
+  value       = module.artifact_registry.repository_url
+  description = "Artifact Registry repo URL for mirrored gateway image"
+}

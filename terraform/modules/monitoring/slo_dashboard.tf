@@ -5,6 +5,7 @@ resource "google_monitoring_custom_service" "eag" {
 }
 
 resource "google_monitoring_slo" "availability" {
+  count        = var.notification_email == "" ? 0 : 1
   service      = google_monitoring_custom_service.eag.service_id
   slo_id       = "eag-availability-slo"
   display_name = "99.9% Availability"
@@ -15,8 +16,8 @@ resource "google_monitoring_slo" "availability" {
 
   request_based_sli {
     good_total_ratio {
-      total_service_filter = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${var.service_name}\""
-      good_service_filter  = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${var.service_name}\" AND metric.labels.response_code_class!=\"5xx\""
+      total_service_filter = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${var.service_name}\" AND metric.type=\"run.googleapis.com/request_count\""
+      good_service_filter  = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${var.service_name}\" AND metric.type=\"run.googleapis.com/request_count\" AND metric.labels.response_code_class!=\"5xx\""
     }
   }
 }
@@ -82,6 +83,7 @@ resource "google_monitoring_dashboard" "eag" {
                       filter = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${var.service_name}\" AND metric.type=\"run.googleapis.com/request_latencies\""
                       aggregation = {
                         alignmentPeriod    = "60s"
+                        perSeriesAligner   = "ALIGN_DELTA"
                         crossSeriesReducer = "REDUCE_PERCENTILE_50"
                       }
                     }
@@ -94,6 +96,7 @@ resource "google_monitoring_dashboard" "eag" {
                       filter = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${var.service_name}\" AND metric.type=\"run.googleapis.com/request_latencies\""
                       aggregation = {
                         alignmentPeriod    = "60s"
+                        perSeriesAligner   = "ALIGN_DELTA"
                         crossSeriesReducer = "REDUCE_PERCENTILE_95"
                       }
                     }
@@ -106,6 +109,7 @@ resource "google_monitoring_dashboard" "eag" {
                       filter = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${var.service_name}\" AND metric.type=\"run.googleapis.com/request_latencies\""
                       aggregation = {
                         alignmentPeriod    = "60s"
+                        perSeriesAligner   = "ALIGN_DELTA"
                         crossSeriesReducer = "REDUCE_PERCENTILE_99"
                       }
                     }

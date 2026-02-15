@@ -17,6 +17,12 @@ variable "log_bucket_location" {
   default = "global"
 }
 
+variable "use_default_logging_bucket" {
+  type        = bool
+  default     = true
+  description = "If true, send logs to the default logging bucket instead of creating a dedicated one (avoids logging.buckets.create permissions)."
+}
+
 variable "archive_bucket_name" {
   type        = string
   description = "Optional override for the GCS archive bucket name"
@@ -36,4 +42,10 @@ variable "archive_retention_days" {
 variable "log_filter" {
   type    = string
   default = ""
+}
+
+variable "use_default_logging_bucket" {
+  type        = bool
+  default     = true
+  description = "If true, logs go to _Default bucket (no bucket create permission required)."
 }

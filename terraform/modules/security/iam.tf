@@ -10,6 +10,12 @@ resource "google_project_iam_member" "secret_accessor" {
   member  = "serviceAccount:${google_service_account.eag.email}"
 }
 
+resource "google_project_iam_member" "secret_version_adder" {
+  project = var.project_id
+  role    = "roles/secretmanager.secretVersionManager"
+  member  = "serviceAccount:${google_service_account.eag.email}"
+}
+
 resource "google_project_iam_member" "trace_agent" {
   project = var.project_id
   role    = "roles/cloudtrace.agent"

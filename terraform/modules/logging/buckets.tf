@@ -1,4 +1,5 @@
 resource "google_logging_project_bucket_config" "audit" {
+  count          = var.use_default_logging_bucket ? 0 : 1
   project        = var.project_id
   location       = var.log_bucket_location
   bucket_id      = local.log_bucket_id

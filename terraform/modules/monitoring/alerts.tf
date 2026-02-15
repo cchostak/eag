@@ -19,7 +19,7 @@ resource "google_monitoring_alert_policy" "high_error_rate" {
     }
   }
 
-  notification_channels = [google_monitoring_notification_channel.email.id]
+  notification_channels = local.notification_channels
 
   alert_strategy {
     auto_close = "86400s"
@@ -56,7 +56,7 @@ resource "google_monitoring_alert_policy" "high_latency" {
     }
   }
 
-  notification_channels = [google_monitoring_notification_channel.email.id]
+  notification_channels = local.notification_channels
 }
 
 resource "google_monitoring_alert_policy" "security_denials" {
@@ -80,7 +80,7 @@ resource "google_monitoring_alert_policy" "security_denials" {
     }
   }
 
-  notification_channels = [google_monitoring_notification_channel.email.id]
+  notification_channels = local.notification_channels
 
   documentation {
     content = <<-EOT
@@ -112,5 +112,5 @@ resource "google_monitoring_alert_policy" "instance_down" {
     }
   }
 
-  notification_channels = [google_monitoring_notification_channel.email.id]
+  notification_channels = local.notification_channels
 }

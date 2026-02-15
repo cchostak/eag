@@ -19,3 +19,8 @@ output "state_bucket" {
 output "dns_instructions" {
   value = "Create an A record for ${var.domain} pointing to ${module.networking.global_ip}"
 }
+
+output "artifact_registry_repo" {
+  value       = module.artifact_registry.repository_url
+  description = "Artifact Registry repo URL for mirrored gateway image"
+}

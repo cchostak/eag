@@ -1,7 +1,7 @@
 resource "google_logging_project_sink" "to_logging_bucket" {
   name                   = "eag-to-logging-bucket"
   project                = var.project_id
-  destination            = "logging.googleapis.com/projects/${var.project_id}/locations/${var.log_bucket_location}/buckets/${google_logging_project_bucket_config.audit.bucket_id}"
+  destination            = local.audit_bucket_destination
   filter                 = "(${local.effective_log_filter}) OR logName:\"projects/${var.project_id}/logs/cloudaudit.googleapis.com%2Factivity\""
   unique_writer_identity = true
 }

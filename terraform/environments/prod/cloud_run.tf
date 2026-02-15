@@ -3,7 +3,7 @@ module "cloud_run" {
 
   project_id            = var.project_id
   regions               = var.regions
-  image                 = var.gateway_image
+  image                 = local.gateway_image_effective
   config_secret_id      = module.security.config_secret_id
   service_account_email = module.security.service_account_email
   min_instances         = var.min_instances

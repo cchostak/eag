@@ -25,8 +25,30 @@ variable "tailscale_cidrs" {
 }
 
 variable "gateway_image" {
+  type = string
+  # Cloud Run accepts gcr.io, *.docker.pkg.dev, or docker.io images. Default to public Cloud Run hello image.
+  default = "us-docker.pkg.dev/cloudrun/container/hello"
+}
+
+variable "source_gateway_image" {
+  type        = string
+  description = "Upstream image to mirror into Artifact Registry if use_artifact_registry_mirror is true"
+  default     = "ghcr.io/agentgateway/agentgateway:0.12.0"
+}
+
+variable "use_artifact_registry_mirror" {
+  type    = bool
+  default = false
+}
+
+variable "artifact_registry_location" {
   type    = string
-  default = "ghcr.io/agentgateway/agentgateway:0.12.0"
+  default = "us"
+}
+
+variable "artifact_registry_repo" {
+  type    = string
+  default = "gateway"
 }
 
 variable "min_instances" {
