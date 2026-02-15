@@ -93,84 +93,84 @@ jobs:
       - name: Health check
         run: python scripts/health_check.py --env staging
 
-  deploy-prod:
-    name: Deploy to Production
-    needs: [validate, deploy-staging]
-    if: github.event.inputs.environment == 'prod' || github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment: production
-    permissions:
-      contents: read
-      id-token: write  # Required for OIDC authentication
+  # deploy-prod:
+  #   name: Deploy to Production
+  #   needs: [validate, deploy-staging]
+  #   if: github.event.inputs.environment == 'prod' || github.ref == 'refs/heads/main'
+  #   runs-on: ubuntu-latest
+  #   environment: production
+  #   permissions:
+  #     contents: read
+  #     id-token: write  # Required for OIDC authentication
 
-    steps:
-      - uses: actions/checkout@v4
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - name: Authenticate to GCP
-        uses: google-github-actions/auth@v2
-        with:
-          # These secrets are set up by scripts/setup-gcp-oidc.sh
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+  #     - name: Authenticate to GCP
+  #       uses: google-github-actions/auth@v2
+  #       with:
+  #         # These secrets are set up by scripts/setup-gcp-oidc.sh
+  #         workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+  #         service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
-      - name: Setup gcloud
-        uses: google-github-actions/setup-gcloud@v2
+  #     - name: Setup gcloud
+  #       uses: google-github-actions/setup-gcloud@v2
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.5"
+  #     - name: Setup Terraform
+  #       uses: hashicorp/setup-terraform@v3
+  #       with:
+  #         terraform_version: "1.5"
 
-      - name: Terraform Init
-        working-directory: terraform/environments/prod
-        run: terraform init
+  #     - name: Terraform Init
+  #       working-directory: terraform/environments/prod
+  #       run: terraform init
 
-      - name: Write terraform.tfvars from secret
-        working-directory: terraform/environments/prod
-        env:
-          TFVARS_CONTENT: ${{ secrets.TERRAFORM_TFVARS_PROD }}
-        run: |
-          if [ -z "$TFVARS_CONTENT" ]; then
-            echo "TERRAFORM_TFVARS_PROD secret is required to supply non-default variables (e.g., project_id, domain, tailscale_cidrs)." >&2
-            exit 1
-          fi
-          printf "%s\n" "$TFVARS_CONTENT" > terraform.tfvars
+  #     - name: Write terraform.tfvars from secret
+  #       working-directory: terraform/environments/prod
+  #       env:
+  #         TFVARS_CONTENT: ${{ secrets.TERRAFORM_TFVARS_PROD }}
+  #       run: |
+  #         if [ -z "$TFVARS_CONTENT" ]; then
+  #           echo "TERRAFORM_TFVARS_PROD secret is required to supply non-default variables (e.g., project_id, domain, tailscale_cidrs)." >&2
+  #           exit 1
+  #         fi
+  #         printf "%s\n" "$TFVARS_CONTENT" > terraform.tfvars
 
-      - name: Terraform Apply
-        working-directory: terraform/environments/prod
-        run: terraform apply -auto-approve
+  #     - name: Terraform Apply
+  #       working-directory: terraform/environments/prod
+  #       run: terraform apply -auto-approve
 
-      - name: Deploy gateway
-        run: python scripts/deploy.py --env prod --image ${{ env.GATEWAY_IMAGE }}
+  #     - name: Deploy gateway
+  #       run: python scripts/deploy.py --env prod --image ${{ env.GATEWAY_IMAGE }}
 
-      - name: Health check
-        run: python scripts/health_check.py --env prod
+  #     - name: Health check
+  #       run: python scripts/health_check.py --env prod
 
-  sync-tailscale-ips:
-    name: Sync Tailscale IPs
-    runs-on: ubuntu-latest
-    # Run daily and on manual trigger
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    environment: production
-    permissions:
-      contents: read
-      id-token: write  # Required for OIDC authentication
+  # sync-tailscale-ips:
+  #   name: Sync Tailscale IPs
+  #   runs-on: ubuntu-latest
+  #   # Run daily and on manual trigger
+  #   if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+  #   environment: production
+  #   permissions:
+  #     contents: read
+  #     id-token: write  # Required for OIDC authentication
 
-    steps:
-      - uses: actions/checkout@v4
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - name: Authenticate to GCP
-        uses: google-github-actions/auth@v2
-        with:
-          # These secrets are set up by scripts/setup-gcp-oidc.sh
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+  #     - name: Authenticate to GCP
+  #       uses: google-github-actions/auth@v2
+  #       with:
+  #         # These secrets are set up by scripts/setup-gcp-oidc.sh
+  #         workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+  #         service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
-      - name: Setup gcloud
-        uses: google-github-actions/setup-gcloud@v2
+  #     - name: Setup gcloud
+  #       uses: google-github-actions/setup-gcloud@v2
 
-      - name: Sync Tailscale IPs
-        env:
-          TAILSCALE_API_KEY: ${{ secrets.TAILSCALE_API_KEY }}
-          TAILSCALE_TAILNET: ${{ secrets.TAILSCALE_TAILNET }}
-        run: python scripts/tailscale_ips.py --env prod
+  #     - name: Sync Tailscale IPs
+  #       env:
+  #         TAILSCALE_API_KEY: ${{ secrets.TAILSCALE_API_KEY }}
+  #         TAILSCALE_TAILNET: ${{ secrets.TAILSCALE_TAILNET }}
+  #       run: python scripts/tailscale_ips.py --env prod
