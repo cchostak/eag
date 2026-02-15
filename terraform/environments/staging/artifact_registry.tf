@@ -4,4 +4,5 @@ module "artifact_registry" {
   project_id    = var.project_id
   location      = var.artifact_registry_location
   repository_id = var.artifact_registry_repo
+  name_suffix   = var.name_suffix
 }

@@ -21,6 +21,8 @@ STATE_BUCKET_REGION="${STATE_BUCKET_REGION:-us-central1}"
 PROJECT_ROLES=(
   "roles/editor"
   "roles/resourcemanager.projectIamAdmin"
+  "roles/logging.configWriter"
+  "roles/secretmanager.secretAccessor"
 )
 SA_ROLES=(
   "roles/iam.workloadIdentityUser"

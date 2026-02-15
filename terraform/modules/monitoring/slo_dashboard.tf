@@ -7,7 +7,7 @@ resource "google_monitoring_custom_service" "eag" {
 resource "google_monitoring_slo" "availability" {
   count        = var.notification_email == "" ? 0 : 1
   service      = google_monitoring_custom_service.eag.service_id
-  slo_id       = "eag-availability-slo"
+  slo_id       = "eag-availability-slo${var.name_suffix}"
   display_name = "99.9% Availability"
   project      = var.project_id
 
