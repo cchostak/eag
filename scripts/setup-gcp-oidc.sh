@@ -8,14 +8,24 @@ set -euo pipefail
 # Can be run in GCP Cloud Shell or locally after `gcloud auth login`
 # ==============================================================================
 
-# Configuration
-PROJECT_ID="networking-486816"
-GITHUB_REPO="cchostak/eag"
-SERVICE_ACCOUNT_NAME="github-terraform"
-WORKLOAD_POOL_NAME="github-pool"
-OIDC_PROVIDER_NAME="github"
-STATE_BUCKET_NAME="egress-forge-tf-state"
-STATE_BUCKET_REGION="us-central1"
+# Configuration (override via environment variables when needed)
+PROJECT_ID="${PROJECT_ID:-networking-486816}"
+GITHUB_REPO="${GITHUB_REPO:-cchostak/eag}"
+SERVICE_ACCOUNT_NAME="${SERVICE_ACCOUNT_NAME:-github-terraform}"
+WORKLOAD_POOL_NAME="${WORKLOAD_POOL_NAME:-github-pool}"
+OIDC_PROVIDER_NAME="${OIDC_PROVIDER_NAME:-github}"
+STATE_BUCKET_NAME="${STATE_BUCKET_NAME:-egress-forge-tf-state}"
+STATE_BUCKET_REGION="${STATE_BUCKET_REGION:-us-central1}"
+
+# Roles (override to tighten permissions)
+PROJECT_ROLES=(
+  "roles/editor"
+  "roles/resourcemanager.projectIamAdmin"
+)
+SA_ROLES=(
+  "roles/iam.workloadIdentityUser"
+  "roles/iam.serviceAccountTokenCreator"
+)
 
 # Colors for output
 RED='\033[0;31m'
@@ -27,6 +37,37 @@ NC='\033[0m' # No Color
 info() { echo -e "${GREEN}[INFO]${NC} $1"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
+
+ensure_project_role() {
+  local role="$1"
+  local member="$2"
+  if gcloud projects get-iam-policy "$PROJECT_ID" --flatten="bindings[].members" \
+      --filter="bindings.role=$role AND bindings.members=$member" \
+      --format="value(bindings.members)" | grep -q "$member"; then
+    warn "Project binding $role already present for $member"
+  else
+    info "Granting $role to $member at project level"
+    gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+      --member="$member" \
+      --role="$role" \
+      --condition=None
+  fi
+}
+
+ensure_sa_binding() {
+  local role="$1"
+  local member="$2"
+  if gcloud iam service-accounts get-iam-policy "$SERVICE_ACCOUNT_EMAIL" \
+      --format="json" | grep -q "\"members\": \\[\"$member\"\\].*\"role\": \"$role\""; then
+    warn "Service account binding $role already present for $member"
+  else
+    info "Granting $role to $member on service account"
+    gcloud iam service-accounts add-iam-policy-binding \
+      "$SERVICE_ACCOUNT_EMAIL" \
+      --role="$role" \
+      --member="$member"
+  fi
+}
 
 # ==============================================================================
 # Step 0: Validate prerequisites
@@ -82,17 +123,9 @@ fi
 # ==============================================================================
 info "Granting IAM permissions to service account..."
 
-# Grant Editor role (adjust based on your needs)
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-  --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
-  --role="roles/editor" \
-  --condition=None
-
-# Grant Project IAM Admin (if Terraform manages IAM bindings)
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-  --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
-  --role="roles/resourcemanager.projectIamAdmin" \
-  --condition=None
+for role in "${PROJECT_ROLES[@]}"; do
+  ensure_project_role "$role" "serviceAccount:${SERVICE_ACCOUNT_EMAIL}"
+done
 
 info "IAM permissions granted"
 
@@ -118,7 +151,21 @@ fi
 if gcloud iam workload-identity-pools providers describe "$OIDC_PROVIDER_NAME" \
    --workload-identity-pool="$WORKLOAD_POOL_NAME" \
    --location=global --project="$PROJECT_ID" &> /dev/null; then
-    warn "OIDC provider '$OIDC_PROVIDER_NAME' already exists, skipping creation"
+    warn "OIDC provider '$OIDC_PROVIDER_NAME' already exists, ensuring it matches desired configuration"
+    CURRENT_CONDITION=$(gcloud iam workload-identity-pools providers describe "$OIDC_PROVIDER_NAME" \
+      --workload-identity-pool="$WORKLOAD_POOL_NAME" \
+      --location=global --project="$PROJECT_ID" \
+      --format="value(attributeCondition)")
+    DESIRED_CONDITION="attribute.repository == '$GITHUB_REPO'"
+    if [[ "$CURRENT_CONDITION" != "$DESIRED_CONDITION" ]]; then
+      info "Updating attribute condition to $DESIRED_CONDITION"
+      gcloud iam workload-identity-pools providers update-oidc "$OIDC_PROVIDER_NAME" \
+        --project="$PROJECT_ID" \
+        --location=global \
+        --workload-identity-pool="$WORKLOAD_POOL_NAME" \
+        --attribute-condition="$DESIRED_CONDITION" \
+        --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository"
+    fi
 else
     info "Creating OIDC provider for GitHub: $OIDC_PROVIDER_NAME"
     gcloud iam workload-identity-pools providers create-oidc "$OIDC_PROVIDER_NAME" \
@@ -145,17 +192,9 @@ info "Project number: $PROJECT_NUMBER"
 # ==============================================================================
 info "Binding Workload Identity Pool to service account..."
 
-# Grant workloadIdentityUser role
-gcloud iam service-accounts add-iam-policy-binding \
-  "$SERVICE_ACCOUNT_EMAIL" \
-  --role="roles/iam.workloadIdentityUser" \
-  --member="principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$WORKLOAD_POOL_NAME/attribute.repository/$GITHUB_REPO"
-
-# Grant serviceAccountTokenCreator role (if needed for token access)
-gcloud iam service-accounts add-iam-policy-binding \
-  "$SERVICE_ACCOUNT_EMAIL" \
-  --role="roles/iam.serviceAccountTokenCreator" \
-  --member="principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$WORKLOAD_POOL_NAME/attribute.repository/$GITHUB_REPO"
+for role in "${SA_ROLES[@]}"; do
+  ensure_sa_binding "$role" "principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$WORKLOAD_POOL_NAME/attribute.repository/$GITHUB_REPO"
+done
 
 info "Service account binding completed"
 
@@ -182,9 +221,13 @@ gsutil uniformbucketlevelaccess set on "gs://$STATE_BUCKET_NAME"
 gsutil pap set enforced "gs://$STATE_BUCKET_NAME"
 
 # Grant service account access to the bucket
-gsutil iam ch \
-  "serviceAccount:$SERVICE_ACCOUNT_EMAIL:objectAdmin" \
-  "gs://$STATE_BUCKET_NAME"
+if gsutil iam get "gs://$STATE_BUCKET_NAME" | grep -q "serviceAccount:$SERVICE_ACCOUNT_EMAIL"; then
+    warn "Bucket IAM already grants access to $SERVICE_ACCOUNT_EMAIL"
+else
+    gsutil iam ch \
+      "serviceAccount:$SERVICE_ACCOUNT_EMAIL:objectAdmin" \
+      "gs://$STATE_BUCKET_NAME"
+fi
 
 info "Bucket security configured"
 
