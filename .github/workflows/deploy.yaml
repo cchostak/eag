@@ -72,6 +72,17 @@ jobs:
         working-directory: terraform/environments/staging
         run: terraform init
 
+      - name: Write terraform.tfvars from secret
+        working-directory: terraform/environments/staging
+        env:
+          TFVARS_CONTENT: ${{ secrets.TERRAFORM_TFVARS_STAGING }}
+        run: |
+          if [ -z "$TFVARS_CONTENT" ]; then
+            echo "TERRAFORM_TFVARS_STAGING secret is required to supply non-default variables (e.g., project_id, domain, tailscale_cidrs)." >&2
+            exit 1
+          fi
+          printf "%s\n" "$TFVARS_CONTENT" > terraform.tfvars
+
       - name: Terraform Apply
         working-directory: terraform/environments/staging
         run: terraform apply -auto-approve
@@ -113,6 +124,17 @@ jobs:
       - name: Terraform Init
         working-directory: terraform/environments/prod
         run: terraform init
+
+      - name: Write terraform.tfvars from secret
+        working-directory: terraform/environments/prod
+        env:
+          TFVARS_CONTENT: ${{ secrets.TERRAFORM_TFVARS_PROD }}
+        run: |
+          if [ -z "$TFVARS_CONTENT" ]; then
+            echo "TERRAFORM_TFVARS_PROD secret is required to supply non-default variables (e.g., project_id, domain, tailscale_cidrs)." >&2
+            exit 1
+          fi
+          printf "%s\n" "$TFVARS_CONTENT" > terraform.tfvars
 
       - name: Terraform Apply
         working-directory: terraform/environments/prod
