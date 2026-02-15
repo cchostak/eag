@@ -83,6 +83,7 @@ jobs:
             PROJECT="${PROJECT_ID_PROD}"
           fi
           cp "${CREDS_PATH}" "${GITHUB_WORKSPACE}/credentials.json"
+          chmod 644 "${GITHUB_WORKSPACE}/credentials.json"
           docker run --rm \
             -v "${GITHUB_WORKSPACE}/credentials.json:/credentials.json:ro" \
             -v "${GITHUB_WORKSPACE}/gcp-nuke.yaml:/config.yaml:ro" \
