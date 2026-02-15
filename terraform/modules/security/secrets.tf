@@ -1,5 +1,5 @@
 resource "google_secret_manager_secret" "config" {
-  secret_id = "eag-gateway-config"
+  secret_id = "eag-gateway-config${var.name_suffix}"
   project   = var.project_id
 
   replication {
@@ -15,7 +15,7 @@ resource "google_secret_manager_secret_version" "config" {
 resource "google_secret_manager_secret" "api_keys" {
   for_each = nonsensitive(var.api_keys)
 
-  secret_id = "eag-${each.key}"
+  secret_id = "eag-${each.key}${var.name_suffix}"
   project   = var.project_id
 
   replication {

@@ -1,5 +1,5 @@
 resource "google_monitoring_custom_service" "eag" {
-  service_id   = "eag-gateway-service"
+  service_id   = "eag-gateway-service${var.name_suffix}"
   display_name = "EAG Gateway"
   project      = var.project_id
 }

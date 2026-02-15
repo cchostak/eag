@@ -17,3 +17,6 @@ use_artifact_registry_mirror = true
 source_gateway_image         = "ghcr.io/agentgateway/agentgateway:0.12.0"
 artifact_registry_location   = "us"
 artifact_registry_repo       = "gateway"
+
+# Suffix applied to resource names to avoid collisions with existing prod/staging resources in same project
+name_suffix = "-stg"

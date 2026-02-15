@@ -1,5 +1,5 @@
 resource "google_logging_project_sink" "to_logging_bucket" {
-  name                   = "eag-to-logging-bucket"
+  name                   = "eag-to-logging-bucket${var.name_suffix}"
   project                = var.project_id
   destination            = local.audit_bucket_destination
   filter                 = "(${local.effective_log_filter}) OR logName:\"projects/${var.project_id}/logs/cloudaudit.googleapis.com%2Factivity\""
@@ -7,7 +7,7 @@ resource "google_logging_project_sink" "to_logging_bucket" {
 }
 
 resource "google_logging_project_sink" "to_archive" {
-  name                   = "eag-to-archive"
+  name                   = "eag-to-archive${var.name_suffix}"
   project                = var.project_id
   destination            = "storage.googleapis.com/${google_storage_bucket.archive.name}"
   filter                 = google_logging_project_sink.to_logging_bucket.filter

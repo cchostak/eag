@@ -8,6 +8,8 @@ module "cloud_run" {
   service_account_email = module.security.service_account_email
   min_instances         = var.min_instances
   max_instances         = var.max_instances
+  service_name          = "eag-gateway"
+  name_suffix           = var.name_suffix
 
   env_secrets = {
     for name, id in module.security.api_key_secret_ids :

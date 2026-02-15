@@ -1,11 +1,11 @@
 resource "google_compute_global_address" "eag" {
-  name    = "eag-global-ip"
+  name    = "eag-global-ip${var.name_suffix}"
   project = var.project_id
 }
 
 resource "google_compute_managed_ssl_certificate" "eag" {
   count   = var.ssl_certificate == "" ? 1 : 0
-  name    = "eag-ssl-cert"
+  name    = "eag-ssl-cert${var.name_suffix}"
   project = var.project_id
 
   managed {
@@ -14,7 +14,7 @@ resource "google_compute_managed_ssl_certificate" "eag" {
 }
 
 resource "google_compute_backend_service" "eag" {
-  name                  = "eag-backend"
+  name                  = "eag-backend${var.name_suffix}"
   project               = var.project_id
   protocol              = "HTTP"
   port_name             = "http"
@@ -35,13 +35,13 @@ resource "google_compute_backend_service" "eag" {
 }
 
 resource "google_compute_url_map" "eag" {
-  name            = "eag-url-map"
+  name            = "eag-url-map${var.name_suffix}"
   project         = var.project_id
   default_service = google_compute_backend_service.eag.self_link
 }
 
 resource "google_compute_target_https_proxy" "eag" {
-  name    = "eag-https-proxy"
+  name    = "eag-https-proxy${var.name_suffix}"
   project = var.project_id
   url_map = google_compute_url_map.eag.self_link
 
@@ -51,7 +51,7 @@ resource "google_compute_target_https_proxy" "eag" {
 }
 
 resource "google_compute_global_forwarding_rule" "eag_https" {
-  name                  = "eag-https-forwarding"
+  name                  = "eag-https-forwarding${var.name_suffix}"
   project               = var.project_id
   target                = google_compute_target_https_proxy.eag.self_link
   port_range            = "443"
@@ -60,7 +60,7 @@ resource "google_compute_global_forwarding_rule" "eag_https" {
 }
 
 resource "google_compute_url_map" "eag_redirect" {
-  name    = "eag-http-redirect"
+  name    = "eag-http-redirect${var.name_suffix}"
   project = var.project_id
 
   default_url_redirect {
@@ -70,13 +70,13 @@ resource "google_compute_url_map" "eag_redirect" {
 }
 
 resource "google_compute_target_http_proxy" "eag_redirect" {
-  name    = "eag-http-redirect-proxy"
+  name    = "eag-http-redirect-proxy${var.name_suffix}"
   project = var.project_id
   url_map = google_compute_url_map.eag_redirect.self_link
 }
 
 resource "google_compute_global_forwarding_rule" "eag_http" {
-  name                  = "eag-http-forwarding"
+  name                  = "eag-http-forwarding${var.name_suffix}"
   project               = var.project_id
   target                = google_compute_target_http_proxy.eag_redirect.self_link
   port_range            = "80"

@@ -5,6 +5,7 @@ module "logging" {
   service_name        = "eag-gateway"
   retention_days      = var.log_retention_days
   archive_bucket_name = var.log_archive_bucket
+  name_suffix         = var.name_suffix
 
   depends_on = [google_project_service.apis]
 }

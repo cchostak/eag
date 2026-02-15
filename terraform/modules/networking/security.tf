@@ -1,5 +1,5 @@
 resource "google_compute_security_policy" "tailscale_allowlist" {
-  name    = "eag-tailscale-allowlist"
+  name    = "eag-tailscale-allowlist${var.name_suffix}"
   project = var.project_id
 
   rule {

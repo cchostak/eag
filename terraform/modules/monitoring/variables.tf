@@ -11,3 +11,9 @@ variable "service_name" {
   type    = string
   default = "eag-gateway"
 }
+
+variable "name_suffix" {
+  type        = string
+  default     = ""
+  description = "Optional suffix appended to metric and service identifiers (include leading dash if desired)"
+}

@@ -51,6 +51,11 @@ variable "artifact_registry_repo" {
   default = "gateway"
 }
 
+variable "name_suffix" {
+  type    = string
+  default = "-prod"
+}
+
 variable "min_instances" {
   type    = number
   default = 1

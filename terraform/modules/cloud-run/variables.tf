@@ -46,3 +46,14 @@ variable "memory" {
   type    = string
   default = "1Gi"
 }
+
+variable "service_name" {
+  type    = string
+  default = "eag-gateway"
+}
+
+variable "name_suffix" {
+  type        = string
+  default     = ""
+  description = "Optional suffix appended to service and NEG names (include leading dash if desired)"
+}

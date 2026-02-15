@@ -1,7 +1,7 @@
 resource "google_cloud_run_v2_service" "eag" {
   for_each = toset(var.regions)
 
-  name     = "eag-gateway"
+  name     = "${var.service_name}${var.name_suffix}"
   location = each.value
   project  = var.project_id
 

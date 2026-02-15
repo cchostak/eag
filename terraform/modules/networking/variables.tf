@@ -22,3 +22,9 @@ variable "ssl_certificate" {
   description = "Google-managed SSL certificate name"
   default     = ""
 }
+
+variable "name_suffix" {
+  type        = string
+  default     = ""
+  description = "Optional suffix appended to networking resource names (include leading dash if desired)"
+}

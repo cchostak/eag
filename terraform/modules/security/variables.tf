@@ -13,3 +13,9 @@ variable "api_keys" {
   default     = {}
   sensitive   = true
 }
+
+variable "name_suffix" {
+  type        = string
+  default     = ""
+  description = "Optional suffix appended to service account and secret IDs (include leading dash if desired)"
+}

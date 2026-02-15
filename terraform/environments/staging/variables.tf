@@ -47,6 +47,11 @@ variable "artifact_registry_repo" {
   default = "gateway"
 }
 
+variable "name_suffix" {
+  type    = string
+  default = "-stg"
+}
+
 variable "api_keys" {
   type      = map(string)
   default   = {}

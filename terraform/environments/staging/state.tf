@@ -3,6 +3,7 @@ module "state_bucket" {
 
   project_id  = var.project_id
   bucket_name = var.state_bucket_name
+  name_suffix = var.name_suffix
 
   depends_on = [google_project_service.apis]
 }

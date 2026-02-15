@@ -12,3 +12,8 @@ variable "location" {
   type    = string
   default = "us"
 }
+
+variable "name_suffix" {
+  type    = string
+  default = ""
+}

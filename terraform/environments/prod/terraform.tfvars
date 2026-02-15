@@ -30,6 +30,9 @@ source_gateway_image         = "ghcr.io/agentgateway/agentgateway:0.12.0"
 artifact_registry_location   = "us"
 artifact_registry_repo       = "gateway"
 
+# Suffix applied to resource names to avoid collisions with staging
+name_suffix = "-prod"
+
 # API keys (sensitive - use env vars or a .tfvars file NOT in git)
 # api_keys = {
 #   "openai-api-key"    = "sk-..."

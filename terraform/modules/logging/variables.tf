@@ -43,3 +43,8 @@ variable "use_default_logging_bucket" {
   default     = true
   description = "If true, logs go to _Default bucket (no bucket create permission required)."
 }
+
+variable "name_suffix" {
+  type    = string
+  default = ""
+}
