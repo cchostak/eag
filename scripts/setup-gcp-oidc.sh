@@ -19,10 +19,21 @@ STATE_BUCKET_REGION="${STATE_BUCKET_REGION:-us-central1}"
 
 # Roles (override to tighten permissions)
 PROJECT_ROLES=(
+  # Core infra/services
   "roles/editor"
   "roles/resourcemanager.projectIamAdmin"
+  # Logging sinks/buckets
   "roles/logging.configWriter"
-  "roles/secretmanager.secretAccessor"
+  "roles/logging.admin"
+  # Secret Manager read/write versions
+  "roles/secretmanager.admin"
+  # Cloud Run + load balancer
+  "roles/run.admin"
+  "roles/compute.admin"
+  # Artifact Registry
+  "roles/artifactregistry.admin"
+  # Monitoring/Alerting
+  "roles/monitoring.admin"
 )
 SA_ROLES=(
   "roles/iam.workloadIdentityUser"
