@@ -1,6 +1,6 @@
-project_id = "networking-486816"
+project_id     = "networking-486816"
 primary_region = "us-central1"
-domain = "eag-staging.yourcompany.com"
+domain         = "eag-staging.yourcompany.com"
 
 regions = [
   "us-central1",

@@ -1,8 +1,8 @@
 # Copy to terraform.tfvars and fill in values
 
-project_id = "networking-486816"
+project_id     = "networking-486816"
 primary_region = "us-central1"
-domain = "eag.yourcompany.com"
+domain         = "eag.yourcompany.com"
 
 # Deploy to these regions for global HA
 regions = [
