@@ -28,3 +28,23 @@ variable "name_suffix" {
   default     = ""
   description = "Optional suffix appended to networking resource names (include leading dash if desired)"
 }
+
+variable "existing_global_address" {
+  type    = string
+  default = ""
+}
+
+variable "existing_ssl_certificate" {
+  type    = string
+  default = ""
+}
+
+variable "existing_url_map_redirect" {
+  type    = string
+  default = ""
+}
+
+variable "existing_security_policy" {
+  type    = string
+  default = ""
+}

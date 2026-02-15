@@ -1,4 +1,5 @@
 resource "google_secret_manager_secret" "config" {
+  count     = var.existing_config_secret_id == "" ? 1 : 0
   secret_id = "eag-gateway-config${var.name_suffix}"
   project   = var.project_id
 
@@ -8,7 +9,8 @@ resource "google_secret_manager_secret" "config" {
 }
 
 resource "google_secret_manager_secret_version" "config" {
-  secret      = google_secret_manager_secret.config.id
+  count       = var.existing_config_secret_id == "" ? 1 : 0
+  secret      = google_secret_manager_secret.config[0].id
   secret_data = file(var.config_yaml_path)
 }
 

@@ -1,3 +1,3 @@
 output "bucket_name" {
-  value = google_storage_bucket.state.name
+  value = var.bucket_name != "" ? var.bucket_name : google_storage_bucket.state[0].name
 }

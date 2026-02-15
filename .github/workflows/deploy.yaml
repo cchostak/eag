@@ -68,6 +68,12 @@ jobs:
         with:
           terraform_version: "1.5"
 
+      - name: Mirror gateway image (optional)
+        env:
+          MIRROR_SOURCE_IMAGE: "ghcr.io/agentgateway/agentgateway:0.12.0"
+          MIRROR_TARGET_REPO:  "us-docker.pkg.dev/networking-486816/gateway-stg3"
+        run: bash scripts/mirror_gateway_image.sh "$MIRROR_SOURCE_IMAGE" "$MIRROR_TARGET_REPO"
+
       - name: Terraform Init
         working-directory: terraform/environments/staging
         run: terraform init

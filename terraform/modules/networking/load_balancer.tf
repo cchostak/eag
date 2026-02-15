@@ -1,10 +1,11 @@
 resource "google_compute_global_address" "eag" {
+  count   = var.existing_global_address == "" ? 1 : 0
   name    = "eag-global-ip${var.name_suffix}"
   project = var.project_id
 }
 
 resource "google_compute_managed_ssl_certificate" "eag" {
-  count   = var.ssl_certificate == "" ? 1 : 0
+  count   = var.ssl_certificate == "" && var.existing_ssl_certificate == "" ? 1 : 0
   name    = "eag-ssl-cert${var.name_suffix}"
   project = var.project_id
 
@@ -60,6 +61,7 @@ resource "google_compute_global_forwarding_rule" "eag_https" {
 }
 
 resource "google_compute_url_map" "eag_redirect" {
+  count   = var.existing_url_map_redirect == "" ? 1 : 0
   name    = "eag-http-redirect${var.name_suffix}"
   project = var.project_id
 
@@ -70,16 +72,18 @@ resource "google_compute_url_map" "eag_redirect" {
 }
 
 resource "google_compute_target_http_proxy" "eag_redirect" {
+  count   = var.existing_url_map_redirect == "" ? 1 : 0
   name    = "eag-http-redirect-proxy${var.name_suffix}"
   project = var.project_id
-  url_map = google_compute_url_map.eag_redirect.self_link
+  url_map = google_compute_url_map.eag_redirect[0].self_link
 }
 
 resource "google_compute_global_forwarding_rule" "eag_http" {
+  count                 = var.existing_url_map_redirect == "" ? 1 : 0
   name                  = "eag-http-forwarding${var.name_suffix}"
   project               = var.project_id
-  target                = google_compute_target_http_proxy.eag_redirect.self_link
+  target                = google_compute_target_http_proxy.eag_redirect[0].self_link
   port_range            = "80"
-  ip_address            = google_compute_global_address.eag.address
+  ip_address            = var.existing_global_address != "" ? var.existing_global_address : google_compute_global_address.eag[0].address
   load_balancing_scheme = "EXTERNAL_MANAGED"
 }

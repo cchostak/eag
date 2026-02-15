@@ -19,3 +19,13 @@ variable "name_suffix" {
   default     = ""
   description = "Optional suffix appended to service account and secret IDs (include leading dash if desired)"
 }
+
+variable "existing_service_account_email" {
+  type    = string
+  default = ""
+}
+
+variable "existing_config_secret_id" {
+  type    = string
+  default = ""
+}
