@@ -41,10 +41,13 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Authenticate to GCP
+        id: auth
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+          export_environment_variables: true
 
       - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@v2
@@ -67,13 +70,22 @@ jobs:
         env:
           PROJECT_ID: ${{ secrets.GCP_PROJECT_ID_STAGING }}
           PROJECT_ID_PROD: ${{ secrets.GCP_PROJECT_ID_PROD }}
+          CREDS_PATH: ${{ steps.auth.outputs.credentials_file_path }}
         run: |
           set -euo pipefail
+          if [[ -z "${CREDS_PATH}" ]]; then
+            echo "Missing GCP credentials file path from auth step" >&2
+            exit 1
+          fi
           if [[ "${{ github.event.inputs.environment }}" == "staging" ]]; then
             PROJECT="${PROJECT_ID}"
-            SUFFIX="-stg3"
           else
             PROJECT="${PROJECT_ID_PROD}"
-            SUFFIX="-prod2"
           fi
-          bash scripts/gcp_nuke.sh "${PROJECT}" "${SUFFIX}"
+          cp "${CREDS_PATH}" "${GITHUB_WORKSPACE}/credentials.json"
+          docker run --rm \
+            -v "${GITHUB_WORKSPACE}/credentials.json:/credentials.json:ro" \
+            -v "${GITHUB_WORKSPACE}/gcp-nuke.yaml:/config.yaml:ro" \
+            -e GOOGLE_APPLICATION_CREDENTIALS=/credentials.json \
+            ghcr.io/ekristen/gcp-nuke:v1.11.0 \
+            run --config /config.yaml --project-id "${PROJECT}"
