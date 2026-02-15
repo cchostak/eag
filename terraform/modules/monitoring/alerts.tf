@@ -68,7 +68,7 @@ resource "google_monitoring_alert_policy" "security_denials" {
     display_name = "Authorization denials > 10/min"
 
     condition_threshold {
-      filter          = "metric.type=\"logging.googleapis.com/user/eag-auth-denials\""
+      filter          = "metric.type=\"logging.googleapis.com/user/eag-auth-denials\" AND resource.type=\"global\""
       duration        = "300s"
       comparison      = "COMPARISON_GT"
       threshold_value = 10
