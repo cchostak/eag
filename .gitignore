@@ -11,6 +11,8 @@ configs/local/config.yaml
 *.tfstate.backup
 *.tfvars
 !*.tfvars.example
+!terraform/environments/staging/terraform.tfvars
+!terraform/environments/prod/terraform.tfvars
 .terraform/
 .terraform.lock.hcl
 
