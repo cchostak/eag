@@ -7,10 +7,10 @@ resource "google_logging_project_sink" "to_logging_bucket" {
 }
 
 resource "google_logging_project_bucket_iam_member" "sink_writer" {
-  project  = var.project_id
-  bucket   = google_logging_project_bucket_config.audit.bucket_id
-  role     = "roles/logging.bucketWriter"
-  member   = google_logging_project_sink.to_logging_bucket.writer_identity
+  project = var.project_id
+  bucket  = google_logging_project_bucket_config.audit.bucket_id
+  role    = "roles/logging.bucketWriter"
+  member  = google_logging_project_sink.to_logging_bucket.writer_identity
 }
 
 resource "google_logging_project_sink" "to_archive" {
