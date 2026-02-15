@@ -13,7 +13,7 @@ resource "google_secret_manager_secret_version" "config" {
 }
 
 resource "google_secret_manager_secret" "api_keys" {
-  for_each = var.api_keys
+  for_each = nonsensitive(var.api_keys)
 
   secret_id = "eag-${each.key}"
   project   = var.project_id
@@ -24,7 +24,7 @@ resource "google_secret_manager_secret" "api_keys" {
 }
 
 resource "google_secret_manager_secret_version" "api_keys" {
-  for_each = var.api_keys
+  for_each = nonsensitive(var.api_keys)
 
   secret      = google_secret_manager_secret.api_keys[each.key].id
   secret_data = each.value
