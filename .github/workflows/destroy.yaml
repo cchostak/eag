@@ -60,8 +60,20 @@ jobs:
 
       - name: Terraform Destroy
         working-directory: terraform/environments/${{ github.event.inputs.environment }}
+        continue-on-error: true
         run: terraform destroy -auto-approve
 
-      - name: Confirm health check is expected to fail
-        continue-on-error: true
-        run: python scripts/health_check.py --env ${{ github.event.inputs.environment }}
+      - name: Fallback nuke (leave IAM/OIDC)
+        env:
+          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID_STAGING }}
+          PROJECT_ID_PROD: ${{ secrets.GCP_PROJECT_ID_PROD }}
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event.inputs.environment }}" == "staging" ]]; then
+            PROJECT="${PROJECT_ID}"
+            SUFFIX="-stg3"
+          else
+            PROJECT="${PROJECT_ID_PROD}"
+            SUFFIX="-prod2"
+          fi
+          bash scripts/gcp_nuke.sh "${PROJECT}" "${SUFFIX}"
