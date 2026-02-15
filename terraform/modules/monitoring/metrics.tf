@@ -1,4 +1,5 @@
 resource "google_logging_metric" "auth_denials" {
+  count       = var.create_auth_metric ? 1 : 0
   name        = "eag-auth-denials${var.name_suffix}"
   description = "Counts authorization denials for the EAG gateway"
   project     = var.project_id

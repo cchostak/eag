@@ -19,4 +19,12 @@ artifact_registry_location   = "us"
 artifact_registry_repo       = "gateway"
 
 # Suffix applied to resource names to avoid collisions with existing prod/staging resources in same project
-name_suffix = "-stg"
+name_suffix = "-stg2"
+
+# Skip log exports when permissions are missing
+enable_exports = false
+
+# Skip auth metric/alert/custom service if already exist
+create_auth_metric    = false
+create_auth_alert     = false
+create_custom_service = false

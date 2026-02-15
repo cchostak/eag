@@ -17,3 +17,18 @@ variable "name_suffix" {
   default     = ""
   description = "Optional suffix appended to metric and service identifiers (include leading dash if desired)"
 }
+
+variable "create_auth_metric" {
+  type    = bool
+  default = true
+}
+
+variable "create_auth_alert" {
+  type    = bool
+  default = true
+}
+
+variable "create_custom_service" {
+  type    = bool
+  default = true
+}

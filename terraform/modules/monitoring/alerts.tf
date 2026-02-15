@@ -60,6 +60,7 @@ resource "google_monitoring_alert_policy" "high_latency" {
 }
 
 resource "google_monitoring_alert_policy" "security_denials" {
+  count        = var.create_auth_alert ? 1 : 0
   display_name = "EAG - High Authorization Denials"
   project      = var.project_id
   combiner     = "OR"

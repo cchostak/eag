@@ -44,6 +44,12 @@ variable "use_default_logging_bucket" {
   description = "If true, logs go to _Default bucket (no bucket create permission required)."
 }
 
+variable "enable_exports" {
+  type        = bool
+  default     = true
+  description = "If false, skip creating sinks and archive bucket (useful when permissions are missing)."
+}
+
 variable "name_suffix" {
   type    = string
   default = ""
