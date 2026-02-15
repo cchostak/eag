@@ -1,81 +1,3 @@
-# networking module - Global LB, Cloud Armor, DNS
-
-variable "project_id" {
-  type = string
-}
-
-variable "tailscale_cidrs" {
-  type        = list(string)
-  description = "Tailscale IP CIDRs allowed through Cloud Armor"
-}
-
-variable "cloud_run_negs" {
-  type        = map(string)
-  description = "Map of region => serverless NEG ID"
-}
-
-variable "domain" {
-  type        = string
-  description = "Domain name for the gateway (e.g. eag.yourcompany.com)"
-}
-
-variable "ssl_certificate" {
-  type        = string
-  description = "Google-managed SSL certificate name"
-  default     = ""
-}
-
-# --- Cloud Armor Security Policy ---
-
-resource "google_compute_security_policy" "tailscale_allowlist" {
-  name    = "eag-tailscale-allowlist"
-  project = var.project_id
-
-  # Default: deny all
-  rule {
-    action   = "deny(403)"
-    priority = "2147483647"
-    match {
-      versioned_expr = "SRC_IPS_V1"
-      config {
-        src_ip_ranges = ["*"]
-      }
-    }
-    description = "Default deny all"
-  }
-
-  # Allow Tailscale IPs
-  rule {
-    action   = "allow"
-    priority = "1000"
-    match {
-      versioned_expr = "SRC_IPS_V1"
-      config {
-        src_ip_ranges = var.tailscale_cidrs
-      }
-    }
-    description = "Allow Tailscale network"
-  }
-
-  # Allow GCP health checks
-  rule {
-    action   = "allow"
-    priority = "900"
-    match {
-      versioned_expr = "SRC_IPS_V1"
-      config {
-        src_ip_ranges = [
-          "35.191.0.0/16",
-          "130.211.0.0/22",
-        ]
-      }
-    }
-    description = "Allow GCP health check ranges"
-  }
-}
-
-# --- Global HTTPS Load Balancer ---
-
 resource "google_compute_global_address" "eag" {
   name    = "eag-global-ip"
   project = var.project_id
@@ -137,7 +59,6 @@ resource "google_compute_global_forwarding_rule" "eag_https" {
   load_balancing_scheme = "EXTERNAL_MANAGED"
 }
 
-# HTTP -> HTTPS redirect
 resource "google_compute_url_map" "eag_redirect" {
   name    = "eag-http-redirect"
   project = var.project_id
@@ -161,14 +82,4 @@ resource "google_compute_global_forwarding_rule" "eag_http" {
   port_range            = "80"
   ip_address            = google_compute_global_address.eag.address
   load_balancing_scheme = "EXTERNAL_MANAGED"
-}
-
-# --- Outputs ---
-
-output "global_ip" {
-  value = google_compute_global_address.eag.address
-}
-
-output "security_policy_id" {
-  value = google_compute_security_policy.tailscale_allowlist.id
 }
