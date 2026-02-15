@@ -49,7 +49,27 @@ variable "artifact_registry_repo" {
 
 variable "name_suffix" {
   type    = string
-  default = "-stg"
+  default = "-stg2"
+}
+
+variable "enable_exports" {
+  type    = bool
+  default = false
+}
+
+variable "create_auth_metric" {
+  type    = bool
+  default = false
+}
+
+variable "create_auth_alert" {
+  type    = bool
+  default = false
+}
+
+variable "create_custom_service" {
+  type    = bool
+  default = false
 }
 
 variable "api_keys" {

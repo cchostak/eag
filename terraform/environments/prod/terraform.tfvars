@@ -24,8 +24,8 @@ max_instances = 10
 
 gateway_image = "us-docker.pkg.dev/cloudrun/container/hello"
 
-# Mirror upstream GHCR image into Artifact Registry so Cloud Run accepts it
-use_artifact_registry_mirror = true
+# Disable mirroring for now (hello image is already in Google registry)
+use_artifact_registry_mirror = false
 source_gateway_image         = "ghcr.io/agentgateway/agentgateway:0.12.0"
 artifact_registry_location   = "us"
 artifact_registry_repo       = "gateway"
